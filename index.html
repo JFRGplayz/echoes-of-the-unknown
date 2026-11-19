@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echoes of the Unknown</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="game" tabindex="0"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="compass"><div id="compass-strip"></div><div id="compass-mark"></div><div id="compass-info"></div></div>
+  <canvas id="markers"></canvas>
+  <div id="crosshair"><div class="ch"></div></div>
+  <div id="scanbox" class="hidden">
+    <div id="scan-label"></div>
+    <div id="scan-bar"><div id="scan-fill"></div></div>
+    <div id="scan-hint"></div>
+  </div>
+  <div id="prompt" class="hidden"></div>
+  <div id="vitals">
+    <div class="vrow"><span>HEALTH</span><div class="bar"><div id="b-health" class="fill hp"></div></div></div>
+    <div class="vrow"><span>OXYGEN</span><div class="bar"><div id="b-o2" class="fill o2"></div></div></div>
+    <div class="vrow"><span>ENERGY</span><div class="bar"><div id="b-energy" class="fill en"></div></div></div>
+    <div id="temp">--°C</div>
+    <div id="status"></div>
+  </div>
+  <div id="tools"></div>
+  <div id="shiphud" class="hidden">
+    <div id="ship-main"></div>
+    <div id="ship-sub"></div>
+  </div>
+  <div id="loc"></div>
+  <div id="toasts"></div>
+  <div id="banner" class="hidden"><div id="banner-title"></div><div id="banner-sub"></div></div>
+  <div id="vignette"></div>
+  <div id="underwater" class="hidden"></div>
+</div>
+
+<div id="panels" class="hidden"></div>
+<div id="dialog" class="hidden"><div id="dialog-card"><div id="dialog-title"></div><div id="dialog-body"></div><div id="dialog-foot">[E] / [Esc] Close</div></div></div>
+<div id="fade"></div>
+
+<div id="menu">
+  <div class="title">
+    <div class="sub">A first-person exploration game</div>
+    <h1>ECHOES OF THE UNKNOWN</h1>
+    <div class="tag">Explore because you want to know what's out there.</div>
+  </div>
+  <div id="menu-buttons"></div>
+  <div id="menu-note"></div>
+</div>
+
+<div id="loading" class="hidden"><div id="loading-text">Loading…</div></div>
+<div id="fatal" class="hidden"></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
