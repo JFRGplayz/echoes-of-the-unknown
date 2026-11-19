@@ -1,180 +1,80 @@
-// Headless smoke test: boots the real game code against stubbed three/DOM and drives it through
-// every major flow (all planets, scanning, mining, boarding, takeoff, space, landing, save/restore).
-import './dom-stub.mjs';
-import * as THREE from 'three';
-const { Game } = await import('../src/game.js');
-const { ENTRIES } = await import('../src/data/codex.js');
-const { PLANETS } = await import('../src/data/planets.js');
-
-let fails = 0;
-const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL:', m); } else console.log('  ok:', m); };
-const finite = (v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
-
-const game = new Game(document.getElementById('game'));
-game.input.locked = true;
-const frames = (n, dt = 1 / 30, fn) => { for (let i = 0; i < n; i++) { fn?.(i); game.step(dt); game.render(); game.input.endFrame(); } };
-const hold = (code, on = true) => { on ? game.input.keys.add(code) : game.input.keys.delete(code); };
-const lookAt = (x, y, z) => {
-  const p = game.player, e = p.eyePos(new THREE.Vector3());
-  const dx = x - e.x, dy = y - e.y, dz = z - e.z;
-  p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+// Planet definitions. Everything planet-specific that is *data* lives here;
+// terrain shaping lives in world/terrain.js, props in world/flora.js, life in data/species.js.
+export const SYSTEM = {
+  name: 'Aurelia',
+  star: { radius: 52000, color: 0xfff1c9, glow: 0xffc27a },
 };
 
-console.log('== boot / new game');
-await game.startNew();
-ok(game.mode === 'surface' && game.world, 'new game lands on Khepri surface');
-frames(120);
-ok(finite(game.player.pos) && game.player.onGround, 'player stands on ground, finite position');
-ok(game.world.creatures.list.length > 0, `creatures spawned (${game.world.creatures.list.length})`);
-ok(game.world.terrain.near.size >= 40, `terrain streamed (${game.world.terrain.near.size} near chunks)`);
-ok(game.world.flora.chunks.size > 0, 'flora instanced');
+export const PLANETS = {
+  khepri: {
+    id: 'khepri', name: 'Khepri', tagline: 'Arid canyon world',
+    seed: 1101, radius: 8200, orbitPos: [-260000, 0, -110000],
+    g: 9.2, dayLength: 1500, startHour: 0.3, axisTilt: 0.35,
+    sky: { zenith: 0x2f5a96, horizon: 0xe2a174, ground: 0x4a2f22, night: 0x05060d, sun: 0xfff0d0, stars: 0.95 },
+    fog: { day: 0xcf9a72, night: 0x090811, density: 0.00042 },
+    light: { sun: 3.4, amb: 0.42 },
+    temp: { max: 58, min: -52 }, o2Drain: 0.35, breathable: false, toxic: 0,
+    weather: { list: [['clear', 6], ['sandstorm', 1]], interval: [260, 520] },
+    terrainType: 'canyon', waterLevel: null,
+    palette: { low: 0x5a2f1f, mid: 0xa5552d, high: 0xd69558, rock: 0x3d2a22, accent: 0xe3c18a },
+    particle: { color: 0xd9b080, size: 0.28 },
+    skyBodies: [{ size: 0.075, color: 0xc9b39a, dir: [-0.5, 0.55, -0.6] }],
+    space: { base: 0xa4562e, accent: 0xe0a468, cloud: 0xe8c9a0, atmo: 0xff9a60, bands: 0.2 },
+  },
+  vesper: {
+    id: 'vesper', name: 'Vesper', tagline: 'Living jungle world',
+    seed: 2207, radius: 7600, orbitPos: [-60000, 0, 330000],
+    g: 8.6, dayLength: 1380, startHour: 0.28, axisTilt: 0.2,
+    sky: { zenith: 0x1a4f7a, horizon: 0x9fd6c4, ground: 0x1c3a30, night: 0x030812, sun: 0xfff8e0, stars: 0.8 },
+    fog: { day: 0x7fb7a2, night: 0x04090c, density: 0.00085 },
+    light: { sun: 2.8, amb: 0.5 },
+    temp: { max: 34, min: 14 }, o2Drain: 0.08, breathable: true, toxic: 0,
+    weather: { list: [['clear', 5], ['sporestorm', 1.4]], interval: [220, 480] },
+    terrainType: 'jungle', waterLevel: 6,
+    palette: { low: 0x1f4a3a, mid: 0x2f8a5c, high: 0x6a5aa8, rock: 0x4b3d34, accent: 0x7cf0d0 },
+    particle: { color: 0xb6ffd8, size: 0.16 },
+    skyBodies: [{ size: 0.05, color: 0xdfe8ff, dir: [0.6, 0.45, 0.4] }, { size: 0.025, color: 0xffd9b0, dir: [-0.3, 0.7, 0.6] }],
+    space: { base: 0x2f8a5c, accent: 0x6a5aa8, cloud: 0xe8fff4, atmo: 0x7cf0d0, bands: 0.05 },
+  },
+  nivalis: {
+    id: 'nivalis', name: 'Nivalis', tagline: 'Frozen signal world',
+    seed: 3313, radius: 9100, orbitPos: [430000, 0, 180000],
+    g: 7.4, dayLength: 1700, startHour: 0.38, axisTilt: 0.5,
+    sky: { zenith: 0x18305a, horizon: 0xaec8e8, ground: 0x6a7f9a, night: 0x02040c, sun: 0xdfeaff, stars: 1.0 },
+    fog: { day: 0xa9c0de, night: 0x050a14, density: 0.00060 },
+    light: { sun: 2.6, amb: 0.55 },
+    temp: { max: -12, min: -78 }, o2Drain: 0.3, breathable: false, toxic: 0,
+    weather: { list: [['clear', 5], ['blizzard', 1.6]], interval: [200, 420] },
+    terrainType: 'glacier', waterLevel: null,
+    palette: { low: 0x8fb4d8, mid: 0xe4f0fb, high: 0xffffff, rock: 0x3a465a, accent: 0x7fd8ff },
+    particle: { color: 0xffffff, size: 0.2 },
+    skyBodies: [{ size: 0.2, color: 0x8fa8d8, dir: [0.2, 0.5, -0.8] }],
+    space: { base: 0xdbe8f6, accent: 0x7fb0e0, cloud: 0xffffff, atmo: 0x9ad0ff, bands: 0.02 },
+  },
+  pelagos: {
+    id: 'pelagos', name: 'Pelagos', tagline: 'Ocean world',
+    seed: 4421, radius: 8800, orbitPos: [150000, 0, -460000],
+    g: 9.0, dayLength: 1450, startHour: 0.33, axisTilt: 0.25,
+    sky: { zenith: 0x1f5f9f, horizon: 0xbfe0f0, ground: 0x1d4a66, night: 0x040a16, sun: 0xfffbe8, stars: 0.85 },
+    fog: { day: 0x9fd0e6, night: 0x050c16, density: 0.00055 },
+    light: { sun: 3.0, amb: 0.5 },
+    temp: { max: 31, min: 16 }, o2Drain: 0.12, breathable: true, toxic: 0,
+    weather: { list: [['clear', 5], ['tempest', 1.3]], interval: [240, 500] },
+    terrainType: 'archipelago', waterLevel: 0,
+    islands: [
+      { x: 0, z: 0, r: 520, h: 42 }, { x: 2300, z: -900, r: 420, h: 38 }, { x: 900, z: 1500, r: 300, h: 30 },
+      { x: -1500, z: -1300, r: 380, h: 36 }, { x: -900, z: 1300, r: 260, h: 24 },
+      { x: 1700, z: 900, r: 170, h: -14 },
+    ],
+    trench: { x: -2600, z: 2300, r: 650, depth: 230 },
+    palette: { low: 0x2b5a6e, mid: 0xe2d6a8, high: 0x4fa36a, rock: 0x4a4e58, accent: 0x7fe8e0 },
+    particle: { color: 0xcfeaff, size: 0.12 },
+    skyBodies: [{ size: 0.06, color: 0xf2f0ff, dir: [-0.6, 0.5, 0.5] }],
+    space: { base: 0x1b5aa0, accent: 0x4fa36a, cloud: 0xffffff, atmo: 0x6ac0ff, bands: 0.03 },
+  },
+};
 
-console.log('== movement');
-const x0 = game.player.pos.x, z0 = game.player.pos.z;
-hold('KeyW'); hold('ShiftLeft'); frames(90); hold('KeyW', false); hold('ShiftLeft', false);
-ok(Math.hypot(game.player.pos.x - x0, game.player.pos.z - z0) > 5, 'WASD moves player');
-hold('Space'); frames(20); hold('Space', false);
-ok(finite(game.player.pos), 'jump/jetpack stays finite');
+export const PLANET_ORDER = ['khepri', 'vesper', 'nivalis', 'pelagos'];
 
-console.log('== scanning a site (Observatory Pylon)');
-const pylon = game.world.structures.scanTargets.filter((t) => t.site.id === 'k_pylon');
-ok(pylon.length === 5, `pylon has ${pylon.length} investigation points`);
-const t0 = pylon[0];
-game.player.pos.set(t0.x + 6, game.world.hf.heightAt(t0.x + 6, t0.z + 22), t0.z + 22);
-game.tool = 0;
-for (let i = 0; i < 160 && !game.journal.has('khepri_pylon:id'); i++) { lookAt(t0.x, t0.y, t0.z); hold('Mouse0', false); game.input.mouse.buttons = 1; frames(1); }
-game.input.mouse.buttons = 0;
-ok(game.journal.has('khepri_pylon:id'), 'scan reveals pylon identification');
-ok(game.journal.has('khepri_pylon:arch'), 'site scan reveals architecture (Triad) fact');
-ok(!game.journal.has('khepri_pylon:inscr'), 'inscription still locked (needs Mk II scanner)');
-
-console.log('== journal links & progression');
-const j = game.journal;
-j.reveal('vesper_spire:arch'); j.reveal('nivalis_arch:arch');
-ok(j.hasFlag('triad_key'), 'Triad link fires after three structures');
-ok(game.revealed.has('n_vault'), 'Triad link reveals the Deep Vault');
-j.reveal('harmonic_hum:id'); j.reveal('lumen_choir:obs:calling');
-ok(j.hasFlag('tone_a'), 'Tone link fires');
-j.reveal('khepri_pylon:inscr'); ok(j.lexicon >= 1, 'inscription grants lexicon');
-game.inventory.res = { ferrolith: 30, silicate_glass: 20, echolite: 12, relic_alloy: 6 };
-game.ship.landed = true;
-ok(game.canCraft() === false || true, 'canCraft evaluates');
-game.player.pos.copy(game.ship.pos).add(new THREE.Vector3(3, -2, 0));
-ok(game.canCraft(), 'can craft next to ship');
-game.buyUpgrade('scanner'); ok(game.stats.scanTier === 2, 'scanner upgraded to Mk II');
-
-console.log('== mining');
-game.player.pos.copy(game.ship.pos).add(new THREE.Vector3(3, -2, 0)); frames(90);
-const nodes = game.world.minableNodes(game.player.pos.x, game.player.pos.z, 400);
-ok(nodes.length > 0, `resource nodes nearby (${nodes.length})`);
-const n = nodes[0];
-game.player.pos.set(n.x + 4, game.world.hf.heightAt(n.x + 4, n.z), n.z);
-game.tool = 1; game.vitals.energy = 100;
-const before = Object.values(game.inventory.res).reduce((a, b) => a + b, 0);
-for (let i = 0; i < 160 && !n.gone; i++) { lookAt(n.x, n.y + 0.6, n.z); game.input.mouse.buttons = 1; frames(1); }
-game.input.mouse.buttons = 0;
-ok(n.gone, 'node mined out');
-ok(Object.values(game.inventory.res).reduce((a, b) => a + b, 0) > before, 'resources added to cargo');
-
-console.log('== survival');
-game.tool = 0; game.vitals.revive(); game.player.pos.set(0, game.world.hf.heightAt(40, 40), 40); game.player.pos.x = 40;
-const o2a = game.vitals.oxygen; frames(150);
-ok(game.vitals.oxygen < o2a, 'oxygen drains on Khepri away from the ship');
-game.player.pos.copy(game.ship.pos).add(new THREE.Vector3(3, -2, 0)); frames(60);
-ok(game.vitals.oxygen >= o2a - 5, 'oxygen restores next to the ship');
-
-console.log('== boarding, takeoff, space');
-game.player.pos.copy(game.ship.pos).add(new THREE.Vector3(4, -2, 0));
-game.input.keys.add('Tab'); game.input.pressedSet.add('Tab'); frames(1); game.input.keys.delete('Tab');
-ok(game.piloting, 'boarded ship');
-hold('Space'); frames(30); ok(!game.ship.landed, 'lifted off'); hold('Space', false);
-// pitch nose up and fly straight up by teleporting near the takeoff altitude
-game.ship.pos.y = game.world.hf.heightAt(game.ship.pos.x, game.ship.pos.z) + 2100;
-frames(5);
-for (let i = 0; i < 80 && game.mode !== 'space'; i++) frames(1);
-ok(game.mode === 'space', 'transitioned to space');
-ok(game.space && finite(game.ship.pos), 'space world built, ship pos finite');
-const kp = new THREE.Vector3(...PLANETS.khepri.orbitPos);
-const alt = game.ship.pos.distanceTo(kp) - PLANETS.khepri.radius;
-ok(alt > 1900 && alt < 2300, `ship starts near the planet surface (alt ${alt.toFixed(0)})`);
-frames(60);
-ok(finite(game.ship.pos) && finite(game.ship.vel), 'space flight stable');
-
-console.log('== cruise & arrive at Vesper');
-const vp = new THREE.Vector3(...PLANETS.vesper.orbitPos);
-game.ship.pos.copy(vp).add(new THREE.Vector3(60000, 5000, 0));
-game.ship.quat.setFromUnitVectors(new THREE.Vector3(0, 0, -1), vp.clone().sub(game.ship.pos).normalize());
-game.ship.vel.set(0, 0, 0); game.ship.fuel = 100;
-hold('KeyV', false); game.input.pressedSet.add('KeyV'); frames(1);
-ok(game.ship.cruising, 'cruise drive engaged');
-for (let i = 0; i < 400 && game.ship.cruising; i++) frames(1);
-ok(!game.ship.cruising, 'cruise disengaged (mass lock)');
-const nav = game.navTargets(); ok(nav.some((t) => t.id === 'vesper'), 'Vesper listed as nav target');
-// drift towards the planet until atmosphere entry
-game.ship.vel.copy(vp.clone().sub(game.ship.pos).normalize().multiplyScalar(300));
-for (let i = 0; i < 600 && game.mode === 'space'; i++) { game.ship.vel.copy(vp.clone().sub(game.ship.pos).normalize().multiplyScalar(300)); frames(1, 0.1); }
-for (let i = 0; i < 60 && game.pending; i++) frames(1);
-ok(game.mode === 'surface' && game.planetId === 'vesper', `entered Vesper atmosphere (mode=${game.mode}, planet=${game.planetId})`);
-ok(game.piloting && finite(game.ship.pos), 'still piloting after atmospheric entry');
-const gh = game.world.hf.heightAt(game.ship.pos.x, game.ship.pos.z);
-ok(game.ship.pos.y - gh > 1200 && game.ship.pos.y - gh < 2100, `arrival altitude sane (${(game.ship.pos.y - gh).toFixed(0)} m)`);
-// descend and land
-game.ship.pos.y = game.world.hf.heightAt(game.ship.pos.x, game.ship.pos.z) + 90; game.ship.vel.set(0, 0, 0); game.ship.quat.set(0, 0, 0, 1);
-for (let i = 0; i < 1500 && !game.ship.landed; i++) { hold('ControlLeft'); frames(1, 0.05); if (game.ship.pos.y - game.world.hf.heightAt(game.ship.pos.x, game.ship.pos.z) < 60) { game.ship.vel.y = Math.max(game.ship.vel.y, -4); } }
-hold('ControlLeft', false);
-ok(game.ship.landed, `ship landed on Vesper (mode=${game.mode} clearance=${(game.ship.pos.y - game.world.hf.heightAt(game.ship.pos.x, game.ship.pos.z)).toFixed(1)} v=${game.ship.vel.toArray().map((x) => x.toFixed(1))} hull=${game.ship.hull.toFixed(0)})`);
-
-console.log('== every planet loads and runs');
-for (const id of ['khepri', 'vesper', 'nivalis', 'pelagos']) {
-  game.enterSurface(id, { fresh: true }); game.piloting = false;
-  frames(240);
-  const w = game.world;
-  ok(finite(game.player.pos) && game.player.pos.y > -400, `${id}: player ok, creatures=${w.creatures.list.length}, chunks=${w.terrain.near.size}`);
-  const sites = w.structures.sites.size; ok(sites === w.hf.sites.length, `${id}: ${sites} sites built`);
-}
-
-console.log('== pelagos swimming');
-game.enterSurface('pelagos', { fresh: true }); game.piloting = false;
-const hf = game.world.hf; let sx = 300, sz = 300; // find open water
-for (let a = 0; a < 200 && hf.heightAt(sx, sz) > -10; a++) { sx += 40; sz += 25; }
-game.player.pos.set(sx, hf.waterLevel - 3, sz); game.vitals.revive();
-frames(60);
-ok(game.player.inWater, 'player is swimming');
-const o2w = game.vitals.oxygen; frames(120);
-ok(game.vitals.oxygen < o2w, 'oxygen drains underwater');
-game.player.pos.y = hf.waterLevel - 3;
-game.player.pos.set(sx, hf.heightAt(sx, sz) + 2, sz);
-frames(60); ok(finite(game.player.pos), 'deep swim stable');
-
-console.log('== vault & ending');
-game.enterSurface('nivalis', { fresh: true }); game.piloting = false;
-const v = game.world.hf.sites.find((s) => s.id === 'n_vault');
-j.flag('triad_key'); j.flag('tone_a'); j.flag('tone_b'); j.flag('resonance'); game.inventory.owned.tuner = 1; game.inventory.recompute();
-game.vaultDoor(); game.ui.closeDialog(); ok(j.hasFlag('vault_open'), 'vault opens with all keys');
-ok(!game.world.structures.colliders.some((c) => c.id === 'n_vault:door'), 'door collider removed when open');
-const core = game.world.structures.scanTargets.find((t) => t.entry === 'echo_core');
-game.player.pos.set(core.x, game.world.hf.heightAt(core.x, core.z), core.z + 6); game.tool = 0;
-for (let i = 0; i < 200 && !j.has('echo_core:ask'); i++) { lookAt(core.x, core.y, core.z); game.input.mouse.buttons = 1; frames(1); }
-game.input.mouse.buttons = 0;
-ok(j.has('echo_core:ask'), 'Echo Core scan reveals the final truth');
-ok(j.has('echo_core:truth') && j.has('echo_core:first'), 'all Echo Core facts known');
-
-console.log('== save / restore');
-const data = JSON.parse(JSON.stringify(game.serialize()));
-ok(data.journal.facts.length > 5 && data.planet === 'nivalis', 'serialises');
-await game.save(false);
-const d2 = await (await import('../src/core/save.js')).Save.load();
-ok(!!d2, 'save reads back');
-game.resetState();
-game.restore(d2);
-ok(game.planetId === 'nivalis' && game.journal.has('echo_core:ask'), 'restore returns to Nivalis with journal intact');
-frames(60); ok(finite(game.player.pos), 'restored world runs');
-
-console.log('== death & respawn');
-game.piloting = false; game.vitals.damage(500, 'test');
-ok(game.vitals.dead, 'player died');
-await new Promise((r) => setTimeout(r, 2000));
-ok(!game.vitals.dead, 'player respawned');
-
-console.log(fails ? `\n${fails} FAILURE(S)` : '\nALL TESTS PASSED');
-process.exit(fails ? 1 : 0);
+// Planetary surface <-> orbit mapping (1 radian of lon/lat = SURFACE_SCALE metres on the flat-ish surface map).
+export const SURFACE_SCALE = 18000;
