@@ -36,7 +36,18 @@ export class Input {
   pressed(code) { return this.pressedSet.has(code); }
   mouseDown(b = 0) { return (this.mouse.buttons & (1 << b)) !== 0; }
   mouseClicked(b = 0) { return this.mousePressed.has(b); }
-  lock() { try { this.el.requestPointerLock?.(); } catch (e) { /* ignored */ } }
+  lock() {
+    if (document.pointerLockElement === this.el) return;
+  
+    try {
+      const result = this.el.requestPointerLock?.();
+      result?.catch?.(() => {
+        // Pointer lock was refused. Wait for another user interaction.
+      });
+    } catch (e) {
+      // Ignore synchronous pointer-lock errors too.
+    }
+  }
   unlock() { try { document.exitPointerLock?.(); } catch (e) { /* ignored */ } }
   endFrame() {
     this.pressedSet.clear(); this.mousePressed.clear();
