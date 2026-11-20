@@ -34,6 +34,7 @@ The universe is waiting to be understood.
 
 export class Game {
   constructor(canvas) {
+    window.game = this;
     this.canvas = canvas;
     this.settings = Settings.load();
     this.quality = QUALITY[this.settings.quality] || QUALITY.medium;
