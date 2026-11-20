@@ -1,3 +1,11 @@
+// Prevent accidental Ctrl+W
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === 'w') {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
 import { Game } from './game.js';
 import { Save } from './core/save.js';
 
