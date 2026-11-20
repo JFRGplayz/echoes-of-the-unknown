@@ -194,7 +194,7 @@ export class Game {
 
   beginPlay() {
     this.playing = true; this.ui.loading(null); this.ui.show(true);
-    this.applySettings(); this.input.lock(); this.audio.boot();
+    this.applySettings(); this.audio.boot();
     this.lastT = performance.now();
     if (!this._started) { this._started = true; requestAnimationFrame((t) => this.frame(t)); }
   }
